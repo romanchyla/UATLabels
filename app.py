@@ -2,6 +2,7 @@ import os
 import heapq
 from rprojc import StandardProject
 from cspatterns.datastructures import graphs, unionfind
+from cspatterns.greedy import mst
 from collections import defaultdict
 
 class Application(StandardProject):
@@ -118,14 +119,13 @@ class Application(StandardProject):
         data = union.compress()
         mst = defaultdict(graphs.WeightedUndirectedGraph)
         seen = {}
-        print(set(data), len(data))
+        #print(set(data), len(data))
         for i, parent in enumerate(data):
             for w, weight in graph.adj(i):
                 if data[w] != parent:
                     continue  # this edge is not part of the same MST
                 mst[parent].add(i, w, weight)
 
-        print(mst)
         return mst.values()
 
 
@@ -155,4 +155,12 @@ def test():
             loc = workdir + '/graph.{}.{}'.format(ic, iic)
             a.dump_graph(subgraph, loc)
             print('-- written: {}'.format(loc))
+
+            
+            if subgraph.num_edges() > 1:
+                print('--- getting shortest MST of the subgraph V={} E={}'.format(subgraph.num_vertices(), subgraph.num_edges()))
+                m = mst.KruskalMST(subgraph)
+                gg = m.extract()
+                a.dump_graph(gg, loc + '.mst')
+
     
