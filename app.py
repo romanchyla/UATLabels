@@ -1,5 +1,6 @@
 import os
 import heapq
+import math
 from rprojc import StandardProject
 from cspatterns.datastructures import graphs, unionfind
 from cspatterns.greedy import mst
@@ -21,12 +22,15 @@ class Application(StandardProject):
         return self._str2id[label]
 
 
-    def relax_edge(self, old_weight):
-        return old_weight / 2.0
+    def weigh_edge(self, v, w, old_weight):
+        return old_weight + 1
 
 
-    def load_labels(self, datafile):
-        
+    def load_graph(self, datafile):
+        """
+        Loads UAT graph from csv file of the format
+        bibcode\tlabel\tlabel
+        """
         if not os.path.exists(datafile):
             raise Exception('{} is not available'.format(datafile))
 
@@ -40,11 +44,20 @@ class Application(StandardProject):
                 while j < len(labels):
                     v, w = self.label2id(labels[i]), self.label2id(labels[j])
                     weight = graph.get_weight(v, w, default=self.config.get('DEFAULT_EDGE_WEIGHT'))
-                    graph.add(v, w, self.relax_edge(weight))
+                    graph.add(v, w, self.weigh_edge(v, w, weight))
                     j += 1
         
         return graph
 
+    def prune_edges(self, graph, min_weight):
+        for v, w, weight in graph.edges():
+            if weight < min_weight:
+                graph.delete_edge(v, w)
+
+    def transform_weights(self, graph):
+        maxw = 0
+        for v, w, weight in graph.edges():
+            graph.add(v, w, 1.0 / max(1.0, (math.log(weight))))
 
     def find_connected_components(self, graph):
         cc = 0
@@ -132,35 +145,41 @@ class Application(StandardProject):
 
 
 def test():
-    a = Application()
-    print(a.config)
-    g = a.load_labels(datafile = a.config.get('UAT_DATA', 'workdir/uat.test'))
-    print('Loaded UAT graph, vertices: {}, edges: {}'.format(g.num_vertices(), g.num_edges()))
+    app = Application()
+    
+    graph = app.load_graph(datafile = app.config.get('UAT_DATA', 'workdir/uat.test'))
+    print('Loaded UAT graph, vertices: {}, edges: {}'.format(graph.num_vertices(), graph.num_edges()))
 
-    print('Going to identify separate graphs (if any)')
+    print('Going to identify separate graphs (if any) - after we have deleted edges not used more than {} times'.format(app.config.get('EDGE_PRUNE_MIN', -1)))
+    app.prune_edges(graph, app.config.get('EDGE_PRUNE_MIN', -1))
+    app.transform_weights(graph)
 
-    ccs = a.find_connected_components(g)
-    print('Found {} connected components'.format(len(ccs)))
+    connected_components = app.find_connected_components(graph)
+    print('Found {} connected components'.format(len(connected_components)))
 
-    workdir = a.config['WORKDIR']
-    split = a.config.get('NUM_SUBGRAPHS')
-    for ic, cc in enumerate(ccs):
-        print('{} vertices: {}, edges: {}'.format(ic, cc.num_vertices(), cc.num_edges()))
+    workdir = app.config['WORKDIR']
+    for ic, cc in enumerate(connected_components):
         loc = workdir + '/graph.{}'.format(ic)
-        a.dump_graph(cc, loc)
+        print('CC: {} V={}, E={}'.format(ic, cc.num_vertices(), cc.num_edges()))
+        
+        app.dump_graph(cc, loc)
         print('-- written into: {}'.format(loc))
 
-        print('Going to split the graph into closest {} subgraphs'.format(split))
-        for iic, subgraph in enumerate(a.split_graph(cc, split)):
-            loc = workdir + '/graph.{}.{}'.format(ic, iic)
-            a.dump_graph(subgraph, loc)
-            print('-- written: {}'.format(loc))
+        print('--- Attempting to split connected component into {} minimal spanning trees'.format(split))
+        kruskal = mst.KruskalMST(cc)
+        split = app.config.get('NUM_SUBGRAPHS')
 
-            
-            if subgraph.num_edges() > 1:
-                print('--- getting shortest MST of the subgraph V={} E={}'.format(subgraph.num_vertices(), subgraph.num_edges()))
-                m = mst.KruskalMST(subgraph)
-                gg = m.extract()
-                a.dump_graph(gg, loc + '.mst')
+        tree = written = None
+        for size, tree in kruskal.iter():
+            if size <= split:
+                for iic, subcc in enumerate(app.find_connected_components(tree)):
+                    app.dump_graph(subcc, loc + '.{}'.format(iic))
+                    print('---- found: {}, V={}, E={}'.format(iic, subcc.num_vertices(), subcc.num_edges()))
+                written = True
+                break
+        if not written:
+            app.dump_graph(tree, loc + '.{}'.format(tree))
+
+        
 
     
