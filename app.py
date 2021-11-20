@@ -165,16 +165,17 @@ def test():
         app.dump_graph(cc, loc)
         print('-- written into: {}'.format(loc))
 
+        split = app.config.get('NUM_SUBGRAPHS')
         print('--- Attempting to split connected component into {} minimal spanning trees'.format(split))
         kruskal = mst.KruskalMST(cc)
-        split = app.config.get('NUM_SUBGRAPHS')
 
         tree = written = None
         for size, tree in kruskal.iter():
             if size <= split:
-                for iic, subcc in enumerate(app.find_connected_components(tree)):
-                    app.dump_graph(subcc, loc + '.{}'.format(iic))
-                    print('---- found: {}, V={}, E={}'.format(iic, subcc.num_vertices(), subcc.num_edges()))
+                for iic, subcc in enumerate(tree.find_connected_components()):
+                    subgraph = graphs.WeightedUndirectedGraph(*subcc)
+                    app.dump_graph(subgraph, loc + '.{}'.format(iic))
+                    print('---- found: {}, V={}, E={}'.format(iic, subgraph.num_vertices(), subgraph.num_edges()))
                 written = True
                 break
         if not written:
@@ -182,4 +183,5 @@ def test():
 
         
 
-    
+if __name__ == '__main__':
+    test()    
