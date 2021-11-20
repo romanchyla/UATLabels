@@ -50,9 +50,9 @@ class Application(StandardProject):
         return graph
 
     def prune_edges(self, graph, min_weight):
-        for v, w, weight in graph.edges():
-            if weight < min_weight:
-                graph.delete_edge(v, w)
+        for v, w, weight in list(graph.edges()):
+            if weight <= min_weight:
+                graph.delete(v, w)
 
     def transform_weights(self, graph):
         maxw = 0
@@ -148,10 +148,10 @@ def test():
     app = Application()
     
     graph = app.load_graph(datafile = app.config.get('UAT_DATA', 'workdir/uat.test'))
-    print('Loaded UAT graph, vertices: {}, edges: {}'.format(graph.num_vertices(), graph.num_edges()))
-
-    print('Going to identify separate graphs (if any) - after we have deleted edges not used more than {} times'.format(app.config.get('EDGE_PRUNE_MIN', -1)))
+    print('Loaded UAT graph, V={}, E={}'.format(graph.num_vertices(), graph.num_edges()))
     app.prune_edges(graph, app.config.get('EDGE_PRUNE_MIN', -1))
+    print('- pruned the graph, V={}, E={}'.format(graph.num_vertices(), graph.num_edges()))
+    print('Going to identify separate graphs (if any) - after we have deleted edges not used more than {} times'.format(app.config.get('EDGE_PRUNE_MIN', -1)))
     app.transform_weights(graph)
 
     connected_components = app.find_connected_components(graph)
@@ -175,7 +175,7 @@ def test():
                 for iic, subcc in enumerate(tree.find_connected_components()):
                     subgraph = graphs.WeightedUndirectedGraph(*subcc)
                     app.dump_graph(subgraph, loc + '.{}'.format(iic))
-                    print('---- found: {}, V={}, E={}'.format(iic, subgraph.num_vertices(), subgraph.num_edges()))
+                    print('---- {}, V={}, E={}'.format(loc + '.{}'.format(iic), subgraph.num_vertices(), subgraph.num_edges()))
                 written = True
                 break
         if not written:
