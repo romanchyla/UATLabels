@@ -187,7 +187,7 @@ class Application(StandardProject):
 def test():
     app = Application()
     
-    graph = app.load_graph(datafile = app.config.get('UAT_DATA', 'workdir/uat.test'))
+    graph = app.load_graph(datafile = app.config.get('UAT_DATA', 'workdir/uat.csv'))
     print('Loaded UAT graph, V={}, E={}'.format(graph.num_vertices(), graph.num_edges()))
     app.prune_edges(graph, app.config.get('EDGE_PRUNE_MIN', -1))
     print('- pruned the graph, V={}, E={}'.format(graph.num_vertices(), graph.num_edges()))
@@ -239,6 +239,7 @@ def test():
     for c in uat['children']:
         # safety check
         assert graph.has_vertex(app.label2id(c['name']))
+        print(c['name'])
         selected_labels.append({
             'name': c['name'],
             'id': app.label2id(c['name']),
@@ -248,6 +249,7 @@ def test():
 
     # here is the potential payoff for the work above; we are going to go through
     # every paper and calculate how close each label is to `top_labels`
+    print('Going to calculate distances between a paper and selected concepts')
     app.calculate_distances(app.config.get('UAT_DATA', 'workdir/uat.csv'), selected_labels)
 
         
