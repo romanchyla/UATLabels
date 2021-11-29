@@ -5,7 +5,7 @@ DEFAULT_EDGE_WEIGHT = 0
 UAT_DATA = 'workdir/uat.csv'
 
 # how many graphs we should try to identify
-NUM_SUBGRAPHS = 500
+NUM_SUBGRAPHS = 10
 
 
 EDGE_PRUNE_MIN = 1
