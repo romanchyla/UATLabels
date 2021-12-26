@@ -1,3 +1,4 @@
 workdir/
 venv/
 *.pyc
+local_config.py
