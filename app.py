@@ -1,9 +1,10 @@
 import os
 import heapq
 import math
+import json
 from rprojc import StandardProject
 from cspatterns.datastructures import graphs, unionfind
-from cspatterns.greedy import mst
+from cspatterns.greedy import mst, shortest_path
 from collections import defaultdict
 
 class Application(StandardProject):
@@ -48,6 +49,45 @@ class Application(StandardProject):
                     j += 1
         
         return graph
+
+    def calculate_distances(self, datafile, concepts):
+        """
+        Loads UAT graph from csv file of the format
+        bibcode\tlabel\tlabel
+
+        And writes back:
+        bibcode\tconcept_label1\tconcept_label2\t....
+        bibcode\tfloat\tfloat\tfloat...
+        """
+        if not os.path.exists(datafile):
+            raise Exception('{} is not available'.format(datafile))
+        
+        missing = set()
+        with open(datafile + '.distances', 'w') as fo:
+            fo.write('bibcode\t{}\n'.format('\t'.join([x['name'] for x in concepts])))
+            for line in open(datafile, 'r'):
+                parts = list(filter(lambda x: x.strip(), line.strip().split('\t')))
+                bibcode, labels = parts[0], parts[1:]
+
+                # for every concept calculate distance to the label
+                results = []
+                for concept in concepts:
+                    distances = []
+                    for label in labels:
+                        lid = self._str2id.get(label, None)
+                        if lid is not None:
+                            distances.append(concept['distance'].get_distance_to(lid))
+                        else:
+                            missing.add(label)
+                    if len(distances):
+                        results.append(sum(distances) / len(distances)) # todo: pick something better
+                    else:
+                        results.append(0.0)
+                
+                fo.write('{}\t{}\n'.format(bibcode, '\t'.join(map(str, results))))
+        
+        print('{} labels were missing: {}'.format(len(missing), missing))
+
 
     def prune_edges(self, graph, min_weight):
         for v, w, weight in list(graph.edges()):
@@ -147,7 +187,7 @@ class Application(StandardProject):
 def test():
     app = Application()
     
-    graph = app.load_graph(datafile = app.config.get('UAT_DATA', 'workdir/uat.test'))
+    graph = app.load_graph(datafile = app.config.get('UAT_DATA', 'workdir/uat.csv'))
     print('Loaded UAT graph, V={}, E={}'.format(graph.num_vertices(), graph.num_edges()))
     app.prune_edges(graph, app.config.get('EDGE_PRUNE_MIN', -1))
     print('- pruned the graph, V={}, E={}'.format(graph.num_vertices(), graph.num_edges()))
@@ -180,6 +220,37 @@ def test():
                 break
         if not written:
             app.dump_graph(tree, loc + '.{}'.format(tree))
+
+    
+    # we've discovered that the graph is made of 2 separate (disconnected) graphs
+    # but the second one is of size V=2; so I'm going to ignore it and we'll work with
+    # the original graph
+
+
+    # build MST out of the graph
+    kruskal = mst.KruskalMST(graph).extract()
+
+    # load UAT (TODO: modify UAT structure - extract nice tree with synonyms)
+    with open('workdir/UAT.json', 'r') as fi:
+        uat = json.load(fi)
+
+    # extract the first level children
+    selected_labels = []
+    for c in uat['children']:
+        # safety check
+        assert graph.has_vertex(app.label2id(c['name']))
+        print(c['name'])
+        selected_labels.append({
+            'name': c['name'],
+            'id': app.label2id(c['name']),
+            'distance': shortest_path.DijkstraShortestPath(kruskal, app.label2id(c['name']))
+        })
+
+
+    # here is the potential payoff for the work above; we are going to go through
+    # every paper and calculate how close each label is to `top_labels`
+    print('Going to calculate distances between a paper and selected concepts')
+    app.calculate_distances(app.config.get('UAT_DATA', 'workdir/uat.csv'), selected_labels)
 
         
 
