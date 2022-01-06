@@ -100,3 +100,31 @@ Then we go through every paper once again and calculate how far/close its keywor
 ## Playtime
 
 You can modify `config.py` and/or the code -- the algorithms are efficient enough to be able to process huge graphs (millions or edges) and `O(ElogV)` time.
+
+
+## Distance between labels from the UAT thesaurus
+
+You can import `dist.py` and then use that program to print distances between two labels (as extracted from the UAT graph).
+
+It works the following way:
+
+1. First we import UAT (config `UAT_SOURCE_DATA`) and extract parent, children, and alternate labels
+1. Then we map all the names to uri (so that you can use synonyms to retrieve nodes)
+1. Lastly, we calculate distance between two labels (see: `Application:find_distances()`)
+
+Basically, we'll walk upwards from the deepest node -- now both nodes (labels) are on the same level; we continue walking upwards until we discover **common ancestor** all the while keeping track of number of steps we took. The method will return the distance and also the data about the ancestor.
+
+Here is an output for some randomly selected pairs:
+
+
+```
+Distance between v="Goedel universe" w="Lunar mineralogy" d=8, closest ancestor={'uri': 'root', 'name': 'root', 'alt': [], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 0, 'id': 0, 'parent': None}
+Distance between v="Barium stars" w="Modified gravity" d=9, closest ancestor={'uri': 'root', 'name': 'root', 'alt': [], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 0, 'id': 0, 'parent': None}
+Distance between v="PSB" w="High energy astronomy" d=4, closest ancestor={'uri': 'root', 'name': 'root', 'alt': [], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 0, 'id': 0, 'parent': None}
+Distance between v="FRBs" w="Unbarred spiral galaxies" d=9, closest ancestor={'uri': 'root', 'name': 'root', 'alt': [], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 0, 'id': 0, 'parent': None}
+Distance between v="Zero-age horizontal branch stars" w="ZHR" d=11, closest ancestor={'uri': 'root', 'name': 'root', 'alt': [], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 0, 'id': 0, 'parent': None}
+Distance between v="Milky Way Galaxy fountains" w="White dwarf stars" d=8, closest ancestor={'uri': 'root', 'name': 'root', 'alt': [], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 0, 'id': 0, 'parent': None}
+Distance between v="Lightcurves" w="Extragalactic Distance Scale" d=4, closest ancestor={'uri': '1684', 'name': 'Astronomical techniques', 'alt': ['Observation techniques', 'Techniques'], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 2, 'id': 1133, 'parent': '1145'}
+Distance between v="NEP" w="Photospheres" d=11, closest ancestor={'uri': 'root', 'name': 'root', 'alt': [], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 0, 'id': 0, 'parent': None}
+Distance between v="Near ultraviolet telescopes" w="Poor clusters" d=7, closest ancestor={'uri': 'root', 'name': 'root', 'alt': [], 'children': {'3', '5', '1', '6', '7', '9', '8', '2', '0', '4'}, 'level': 0, 'id': 0, 'parent': None}
+```

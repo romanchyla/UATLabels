@@ -9,3 +9,7 @@ NUM_SUBGRAPHS = 10
 
 
 EDGE_PRUNE_MIN = 1
+
+
+# UAT dictionary: https://github.com/astrothesaurus/UAT/blob/master/UAT.json
+UAT_SOURCE_DATA = 'workdir/UAT.json'

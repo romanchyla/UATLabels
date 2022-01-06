@@ -1,2 +1,2 @@
-git+https://github.com/romanchyla/ProjectsC.git
+git+https://github.com/romanchyla/rprojc.git
 git+https://github.com/romanchyla/CSPatterns.git
