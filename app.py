@@ -10,13 +10,29 @@ from collections import defaultdict
 class Application(StandardProject):
     def __init__(self):
         super().__init__('UAT labels', proj_home=os.path.abspath('.'))
+        self.synonyms = self.load_synonyms()
         self._id2str = []
         self._str2id = {}
+
+    def load_synonyms(self):
+        with open(self.config['UAT_SYNONYMS'], 'r') as fi:
+            synonyms = json.load(fi)
+            namereverse = dict()
+            # turn {label: uri} into {label: canonical_label}
+            # for efficient lookup
+            for k,v in synonyms.items():
+                namereverse[v] = k
+            for k,v in synonyms.items():
+                synonyms[k] = namereverse[v]
+            return synonyms
 
     def id2label(self, id:int) -> str:
         return self._id2str[id]
 
     def label2id(self, label:str) -> int:
+        # check if this label can be turned into a canonical synonym
+        if label in self.synonyms:
+            label = self.synonyms[label]
         if label not in self._str2id:
             self._str2id[label] = len(self._id2str)
             self._id2str.append(label)
@@ -74,6 +90,7 @@ class Application(StandardProject):
                 for concept in concepts:
                     distances = []
                     for label in labels:
+                        label = self.synonyms.get(label, label)
                         lid = self._str2id.get(label, None)
                         if lid is not None:
                             distances.append(concept['distance'].get_distance_to(lid))
@@ -237,7 +254,7 @@ def test():
     # extract the first level children
     selected_labels = []
     for c in uat['children']:
-        # safety check
+    # safety check
         assert graph.has_vertex(app.label2id(c['name']))
         print(c['name'])
         selected_labels.append({

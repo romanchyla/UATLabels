@@ -14,6 +14,14 @@ class Application(StandardProject):
         self.data = self.ingest_uat(self.config['UAT_SOURCE_DATA'])
         self.str2uri = self.build_name_mapping()
     
+    def persist(self):
+        """Dump tree/mapping into the files"""
+
+        with open(self.config['WORKDIR'] + '/uat.tree.json', 'w') as fo:
+            fo.write(json.dumps(self.data))
+        with open(self.config['WORKDIR'] + '/uat.synonyms.json', 'w') as fo:
+            fo.write(json.dumps(self.str2uri))
+
     def ingest_uat(self, uat_file):
         """Extract useful data from UAT thesaurus"""
         with open(uat_file, 'r') as fi:
@@ -42,6 +50,10 @@ class Application(StandardProject):
         # that apper is separate branches (which seems fair to me)
         root = {'uri': 'foo/root', 'children': j['children'], 'name': 'root', 'alt': []}
         harvest(root, 0, None)
+
+        # turn children into list (to be easily serializable)
+        for k,v in visited.items():
+            v['children'] = list(v['children'])
         return visited
     
     def build_name_mapping(self):
@@ -86,15 +98,15 @@ class Application(StandardProject):
         xvuri,xwuri = vuri, wuri
 
         while xdiff and xwuri != 'root':
+            distance += 1.0 / (self.data[xwuri]['level']+1)
             xwuri = self.data[xwuri]['parent'] # move one level higher
-            distance += 1
             xdiff -= 1
 
         
         # walk until we find the common ancestor
         while xvuri != xwuri:
+            distance += 2 * (1.0 / (self.data[xwuri]['level']+1))
             xvuri, xwuri = self.data[xvuri]['parent'], self.data[xwuri]['parent']
-            distance += 2
         
         return (distance, self.data[xvuri]) # closest common ancestor
 
@@ -102,6 +114,9 @@ class Application(StandardProject):
 
 def test():
     a = Application()
+
+    # so that we can load it elsewhere
+    a.persist()
 
     # pick random pairs
     labels = list(a.str2uri.keys())
@@ -115,7 +130,8 @@ def test():
         i -= 1
         
         d,ancestor = a.find_distance(labels[v], labels[w])
-        print('Distance between v="{}" w="{}" d={}, closest ancestor={}'.format(labels[v], labels[w], d, ancestor))
+        print('{} \n Distance between v="{} (level={})" w="{} (level={})"\n closest ancestor={}'.format(
+            d, labels[v], a.data[a.str2uri[labels[v]]]['level'], labels[w], a.data[a.str2uri[labels[w]]]['level'], ancestor))
     
 
 
